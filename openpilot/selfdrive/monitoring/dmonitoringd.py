@@ -31,7 +31,7 @@ def dmonitoringd_thread():
     sm_ctrl.update(0)
     alerts_off = bool(sm_ctrl.alive['driverMonitoringControlSP'] and sm_ctrl['driverMonitoringControlSP'].alertsOff)
     if alerts_off != DM.alerts_suppressed:
-      cloudlog.warning(f"driver monitoring alerts {'OFF' if alerts_off else 'ON'} (onroad hold toggle)")
+      cloudlog.warning(f"driver monitoring alerts {'OFF' if alerts_off else 'ON'} (onroad driver icon tap)")
       DM.alerts_suppressed = alerts_off
 
     valid = sm.all_checks()

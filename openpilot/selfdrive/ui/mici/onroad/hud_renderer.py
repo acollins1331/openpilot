@@ -138,6 +138,11 @@ class HudRenderer(Widget):
     # navigate home)? Base has no tap handling; the sunnypilot mici hud overrides this.
     return False
 
+  def set_driver_icon_visible(self, visible: bool) -> None:
+    # Generic hook: whether the driver icon (dmoji) is on screen this frame. Base has no use for it;
+    # the sunnypilot mici hud only accepts its DM alerts tap while the icon is showing.
+    pass
+
   def set_can_draw_top_icons(self, can_draw_top_icons: bool):
     """Set whether to draw the top part of the HUD."""
     self._can_draw_top_icons = can_draw_top_icons

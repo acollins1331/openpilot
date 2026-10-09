@@ -64,7 +64,7 @@ class UIStateSP:
     self.torque_override_enabled: bool = False
     self._sp_initialized: bool = False
 
-    # driver-requested "DM alerts off" for the current drive (onroad hold on the driver icon)
+    # driver-requested "DM alerts off" for the current drive (onroad tap on the driver icon)
     self.dm_alerts_off: bool = False
     self._dm_alerts_started_prev: bool = False
     self._dm_control_pm: messaging.PubMaster | None = None
