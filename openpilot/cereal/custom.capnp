@@ -499,7 +499,10 @@ struct ModelDataV2SP @0xa1680744031fdb2d {
   }
 }
 
-struct CustomReserved10 @0xcb9fd56c7057593a {
+struct DriverMonitoringControlSP @0xcb9fd56c7057593a {
+  # Published by the UI while onroad. When true, dmonitoringd keeps monitoring but raises no
+  # attention alerts, no DM disengagement and no lockout. The UI resets it to false every drive.
+  alertsOff @0 :Bool;
 }
 
 struct CustomReserved11 @0xc2243c65e0340384 {

@@ -141,6 +141,9 @@ class DriverMonitoring:
 
     self.alert_level = AlertLevel.none
     self.always_on = always_on
+    # sunnypilot: driver chose to silence DM for this drive (glare). Monitoring keeps running,
+    # but no alerts, no DM disengagement and no lockout are raised while this is set.
+    self.alerts_suppressed = False
     self.distracted_types = defaultdict(bool)
     self.driver_distracted = False
     self.driver_distraction_filter = FirstOrderFilter(0., self.settings._DISTRACTED_FILTER_TS, DT_DMON)
@@ -327,6 +330,12 @@ class DriverMonitoring:
         self.no_response_cnt = 0
         self.lockout_time_elapsed = 0
 
+    if self.alerts_suppressed:
+      # hold awareness full so no alert level is reached and nothing counts toward a lockout;
+      # an existing lockout keeps timing out and is only hidden in the published state
+      self._reset_awareness()
+      return
+
     always_on_valid = self.always_on and not wrong_gear
     if (self.driver_interacting and self.awareness > 0 and self.active_policy == MonitoringPolicy.wheeltouch) or \
        (not always_on_valid and not op_engaged) or \
@@ -385,9 +394,10 @@ class DriverMonitoring:
     dat = messaging.new_message('driverMonitoringState', valid=valid)
     dm = dat.driverMonitoringState
 
-    dm.lockout = self.lockout_active
+    lockout_active = self.lockout_active and not self.alerts_suppressed
+    dm.lockout = lockout_active
     dm.lockoutCount = self.lockout_count
-    if self.lockout_active:
+    if lockout_active:
       dm.lockoutMinutesRemaining = max(1, round((self.lockout_duration - self.lockout_time_elapsed) * DT_DMON / 60.))
     dm.alert3Count = self.alert_3_cnt
     dm.noResponseCount = self.no_response_cnt

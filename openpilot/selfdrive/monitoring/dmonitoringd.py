@@ -2,6 +2,7 @@
 import openpilot.cereal.messaging as messaging
 from openpilot.common.params import Params
 from openpilot.common.realtime import config_realtime_process
+from openpilot.common.swaglog import cloudlog
 from openpilot.selfdrive.monitoring.policy import DriverMonitoring
 
 
@@ -13,6 +14,10 @@ def dmonitoringd_thread():
   sm = messaging.SubMaster(['driverStateV2', 'liveCalibration', 'carState', 'selfdriveState', 'modelV2',
                             'carControl'], poll='driverStateV2')
 
+  # sunnypilot: the UI's per-drive "DM alerts off" request. Kept on its own SubMaster so it never
+  # affects the validity checks above; a stale or missing message (UI down) means alerts stay on.
+  sm_ctrl = messaging.SubMaster(['driverMonitoringControlSP'])
+
   DM = DriverMonitoring(rhd_saved=params.get_bool("IsRhdDetected"), always_on=params.get_bool("AlwaysOnDM"))
   demo_mode=False
 
@@ -22,6 +27,12 @@ def dmonitoringd_thread():
     if not sm.updated['driverStateV2']:
       # iterate when model has new output
       continue
+
+    sm_ctrl.update(0)
+    alerts_off = bool(sm_ctrl.alive['driverMonitoringControlSP'] and sm_ctrl['driverMonitoringControlSP'].alertsOff)
+    if alerts_off != DM.alerts_suppressed:
+      cloudlog.warning(f"driver monitoring alerts {'OFF' if alerts_off else 'ON'} (onroad hold toggle)")
+      DM.alerts_suppressed = alerts_off
 
     valid = sm.all_checks()
     if demo_mode and sm.valid['driverStateV2']:

@@ -4,6 +4,7 @@ Copyright (c) 2021-, Haibin Wen, sunnypilot, and a number of other contributors.
 This file is part of sunnypilot and is licensed under the MIT License.
 See the LICENSE.md file in the root directory for more details.
 """
+import time
 from enum import Enum
 
 from openpilot.cereal import messaging, log, custom
@@ -63,11 +64,42 @@ class UIStateSP:
     self.torque_override_enabled: bool = False
     self._sp_initialized: bool = False
 
+    # driver-requested "DM alerts off" for the current drive (onroad hold on the driver icon)
+    self.dm_alerts_off: bool = False
+    self._dm_alerts_started_prev: bool = False
+    self._dm_control_pm: messaging.PubMaster | None = None
+    self._dm_control_last_send: float = 0.0
+
   def update(self) -> None:
     if self.sunnylink_enabled:
       self.sunnylink_state.start()
     else:
       self.sunnylink_state.stop()
+
+    self._update_dm_alerts_control()
+
+  def toggle_dm_alerts_off(self) -> None:
+    if not self.started:
+      return
+    self.dm_alerts_off = not self.dm_alerts_off
+
+  def _update_dm_alerts_control(self) -> None:
+    # every drive starts with alerts on
+    if self.started != self._dm_alerts_started_prev:
+      self.dm_alerts_off = False
+      self._dm_alerts_started_prev = self.started
+
+    # publish the level at 10Hz; dmonitoringd treats a stale message as alerts on
+    now = time.monotonic()
+    if now - self._dm_control_last_send < 0.1:
+      return
+    self._dm_control_last_send = now
+
+    if self._dm_control_pm is None:
+      self._dm_control_pm = messaging.PubMaster(['driverMonitoringControlSP'])
+    msg = messaging.new_message('driverMonitoringControlSP')
+    msg.driverMonitoringControlSP.alertsOff = self.dm_alerts_off and self.started
+    self._dm_control_pm.send('driverMonitoringControlSP', msg)
 
   def onroad_brightness_handle_alerts(self, _ui_state, alert):
     if _ui_state.sm.recv_frame["carState"] < _ui_state.started_frame:
